@@ -3,68 +3,103 @@
 ;; Author: Leonardo Tamiano
 
 (defvar icheat-cmd-list nil
-  "A list of dynamically generated tool command function symbols.")
+  "List of dynamically generated tools.")
+
+(defvar icheat-fmt-list nil
+  "List of dynamically generated fmt options.")
 
 (defun icheat--format (fmt)
-  ;; TODO: for the resolution of each format identifier we can
-  ;; approach it in three different ways:
+  ;; For the resolution of each format identifier we prioritize as
+  ;; follows:
   ;;
-  ;; - check if there is a direct variable icheat-var-<format-identifier>
-  ;; - check if there is a function icheat-cmd-<format-identifier>
-  ;; - ask input to the user
+  ;; - The variable icheat-var-<format-identifier> has most precedence
+  ;; - The function icheat-fmt-<format-identifier> will take care of the rest
   ;;
-  (let* ((ip-var (if (boundp 'my/ip) my/ip "0.0.0.0"))
-         (fmt (replace-regexp-in-string "%ip" "127.0.0.1" fmt))
-         (fmt (replace-regexp-in-string "%port" "4321" fmt))
-         (fmt (if (string-match-p "%wordlist" fmt)
-                  (replace-regexp-in-string "%wordlist" (icheat-cmd-wordlist t) fmt)
-                fmt
-                ))
-         (fmt (if (string-match-p "%extension" fmt)
-                  (replace-regexp-in-string "%extension" (icheat-cmd-extension t) fmt)
-                fmt
-                ))
+  ;; NOTE: we're assuming that each format used has to be defined in
+  ;; the cheatsheet using the 'icheat-def-fmt' macro as showcased in
+  ;; ./example/pt.el
+  ;;
+  (dolist (fmt-opt icheat-fmt-list)
+    (let* ((var-sym (read (format "icheat-var-%s" fmt-opt)))
+           (fun-sym (read (format "icheat-fmt-%s" fmt-opt)))
+           (fmt-str (concat "%" fmt-opt))
+           (exists? (string-match fmt-str fmt))
+           (value (if (not exists?)
+                      nil
+                    (cond
+                     ((boundp var-sym) (symbol-value var-sym))
+                     ((fboundp fun-sym) (funcall fun-sym))
+                     )))
+           )
+      (when exists?
+        (setq fmt (replace-regexp-in-string fmt-str value fmt)))
+      )
+    )
+  fmt
+  )
+
+(defmacro icheat-def-fmt (name fmt-alist)
+  (let* ((func-name (intern (format "icheat-fmt-%s" name)))
+         (prompt (format "%s: " name))
+         (fmt-types (mapcar 'car fmt-alist))
+         (ip-sym 'ip-var)
+         (type-sym 'type-var)
+         (output-sym 'output-var)
+         (value-p-sym 'value?)
          )
-    fmt
+    (add-to-list 'icheat-fmt-list name t)
+    `(defun ,func-name (&optional ,value-p-sym)
+       (interactive)
+       (let* ((,type-sym (completing-read ,prompt ',fmt-types))
+              (,output-sym
+               (cond
+                ,@(mapcar
+                   (lambda (pair)
+                     (let ((type (car pair))
+                           (value (cdr pair)))
+                       `((string= ,type-sym ,type)
+                         ,value))
+                     )
+                   fmt-alist)
+                (t ,type-sym)
+                ))
+              )
+         ,output-sym
+         )
+       )
     )
   )
 
-(defmacro icheat-def-cmd (tool-name software? cmd-alist)
-  (let* ((func-name (intern (format "icheat-cmd-%s" tool-name)))
-         (prompt (format "%s: " tool-name))
+(defmacro icheat-def-cmd (name cmd-alist)
+  (let* ((func-name (intern (format "icheat-cmd-%s" name)))
+         (prompt (format "%s: " name))
          (cmd-types (mapcar 'car cmd-alist))
          (ip-sym 'ip-var)
          (type-sym 'type-var)
          (output-sym 'output-var)
          (value-p-sym 'value?)
          )
-    (when software?
-      (add-to-list 'my/tool-cmd-list tool-name t))
-    (if (not cmd-alist)
-        `(defun ,func-name (&optional ,value-p-sym)
-           (interactive)
-           (message "No commands defined for tool '%s'." ,tool-name)
-           nil)
-      `(defun ,func-name (&optional ,value-p-sym)
-         (interactive)
-         (let* ((,type-sym (completing-read ,prompt ',cmd-types))
-                (,output-sym
-                 (cond
-                  ,@(mapcar
-                     (lambda (pair)
-                       (let ((type (car pair))
-                             (format-string (cdr pair)))
-                         `((string= ,type-sym ,type)
-                           (icheat--format
-                            (icheat--format ,format-string)))))
-                     cmd-alist)))
-                )
-           (if ,value-p-sym
-               ,output-sym
-             (kill-new ,output-sym))
-           )
+    (add-to-list 'icheat-cmd-list name t)
+    `(defun ,func-name (&optional ,value-p-sym)
+       (interactive)
+       (let* ((,type-sym (completing-read ,prompt ',cmd-types))
+              (,output-sym
+               (cond
+                ,@(mapcar
+                   (lambda (pair)
+                     (let ((type (car pair))
+                           (format-string (cdr pair)))
+                       `((string= ,type-sym ,type)
+                         (icheat--format
+                          (icheat--format ,format-string)))))
+                   cmd-alist))
+               )
+              )
+         (if ,value-p-sym
+             ,output-sym
+           (kill-new ,output-sym))
          )
-      )
+       )
     )
   )
 
