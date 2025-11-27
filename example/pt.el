@@ -21,12 +21,12 @@
   ("directory-list-2.3-big.txt"    . "/home/leo/tool/wordlist/SecLists/Discovery/Web-Content/DirBuster-2007_directory-list-2.3-big.txt")
   ))
 
-;; =============================================
-
 (icheat-def-fmt
  "extension"
  (("php" . "php")
   ))
+
+;; =============================================
 
 (icheat-def-cmd
  "ping"

